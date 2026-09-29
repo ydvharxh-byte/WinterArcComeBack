@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Local databases & persistent data
+.data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env*.local
+.env
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tsbuildinfo
+.turbo/

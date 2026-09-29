@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Academic OS palette */
+  --color-ink: #0b1220;      /* page background */
+  --color-panel: #111c2e;    /* surfaces */
+  --color-panel2: #16233a;   /* raised surfaces, inputs */
+  --color-line: #243247;     /* borders */
+  --color-line2: #31435e;    /* border hover */
+
+  --color-brand: #2563eb;    /* primary action */
+  --color-ice: #06b6d4;      /* secondary accent (data, revision) */
+  --color-indigo: #6366f1;   /* sparing use only */
+  --color-violet: #6366f1;   /* legacy alias → indigo, keeps old classes sane */
+  --color-violet-soft: #818cf8;
+  --color-cyan: #06b6d4;
+
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  --color-fog: #f8fafc;
+  --color-mute: #94a3b8;
+  --color-dim: #64748b;
+}
+
+:root {
+  --accent: #2563eb;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-fog);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.bg-accent { background-color: var(--accent); }
+.text-accent { color: var(--accent); }
+.border-accent { border-color: var(--accent); }
+.bg-accent-soft { background-color: color-mix(in srgb, var(--accent) 14%, transparent); }
+.ring-accent { --tw-ring-color: var(--accent); }
+
+.font-display { font-family: var(--font-display); }
+
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+* { scrollbar-width: thin; scrollbar-color: #243247 transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #243247; border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.62);
+  cursor: pointer;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.anim-fade-up { animation: fadeUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.98) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.anim-pop { animation: popIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* restrained card: subtle border + flat surface, no glow */
+.card-hover { transition: border-color 0.15s ease, background-color 0.15s ease; }
+.card-hover:hover { border-color: #31435e; }
+
+/* academic prose for generated lessons */
+.lesson h1 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; margin: 0 0 0.75rem; }
+.lesson h2 { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; color: #f8fafc; margin: 1.35rem 0 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid #243247; }
+.lesson h3 { font-size: 0.875rem; font-weight: 600; margin: 1rem 0 0.3rem; }
+.lesson p { margin: 0.45rem 0; line-height: 1.7; color: #cbd5e1; font-size: 0.875rem; }
+.lesson ul, .lesson ol { margin: 0.45rem 0 0.45rem 1.1rem; }
+.lesson li { margin: 0.3rem 0; line-height: 1.65; color: #cbd5e1; font-size: 0.875rem; list-style: disc; }
+.lesson ol li { list-style: decimal; }
+.lesson code { background: #16233a; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; color: #93c5fd; }
+.lesson strong { color: #f8fafc; font-weight: 600; }
+.lesson blockquote { border-left: 2px solid #2563eb; padding-left: 0.75rem; margin: 0.6rem 0; color: #94a3b8; font-size: 0.85rem; }
+.lesson table { width: 100%; border-collapse: collapse; margin: 0.6rem 0; font-size: 0.82rem; }
+.lesson th, .lesson td { border: 1px solid #243247; padding: 0.4rem 0.6rem; text-align: left; }
+.lesson th { background: #16233a; font-weight: 600; }
