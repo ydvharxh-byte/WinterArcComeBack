@@ -52,15 +52,26 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 /* --------------------------------- Settings -------------------------------- */
 
 export async function getSettings(): Promise<SettingsDTO> {
-  const rows = await db.select().from(settings);
-  const map = new Map(rows.map((r) => [r.key, r.value]));
-  return {
-    name: map.get("name") ?? "Student",
-    accent: map.get("accent") ?? "#2563EB",
-    studyTargetMin: Number(map.get("studyTargetMin") ?? 180),
-    classLevel: map.get("classLevel") ? Number(map.get("classLevel")) : null,
-    board: map.get("board") ?? null,
-  };
+  try {
+    const rows = await db.select().from(settings);
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+    return {
+      name: map.get("name") ?? "Student",
+      accent: map.get("accent") ?? "#2563EB",
+      studyTargetMin: Number(map.get("studyTargetMin") ?? 180),
+      classLevel: map.get("classLevel") ? Number(map.get("classLevel")) : null,
+      board: map.get("board") ?? null,
+    };
+  } catch (err) {
+    console.error("Notice: settings read fallback:", err);
+    return {
+      name: "Student",
+      accent: "#2563EB",
+      studyTargetMin: 180,
+      classLevel: null,
+      board: null,
+    };
+  }
 }
 
 export async function updateSettings(input: Partial<SettingsDTO>): Promise<ActionResult> {
@@ -83,14 +94,35 @@ export async function updateSettings(input: Partial<SettingsDTO>): Promise<Actio
 /* ---------------------------------- Shell ---------------------------------- */
 
 export async function getShellData(): Promise<ShellData> {
-  const [s, xp, streak] = await Promise.all([getSettings(), totalXp(), activityStreak()]);
-  return {
-    settings: s,
-    level: levelFromXp(xp) as LevelDTO,
-    streak: streak.current,
-    arc: arcSnapshot(todayStr()),
-    today: todayStr(),
-  };
+  try {
+    const [s, xp, streak] = await Promise.all([
+      getSettings().catch(() => ({ name: "Student", accent: "#2563EB", studyTargetMin: 180, classLevel: null, board: null })),
+      totalXp().catch(() => 0),
+      activityStreak().catch(() => ({ current: 0, longest: 0, todayActive: false })),
+    ]);
+    return {
+      settings: s,
+      level: levelFromXp(xp) as LevelDTO,
+      streak: streak.current,
+      arc: arcSnapshot(todayStr()),
+      today: todayStr(),
+    };
+  } catch (err) {
+    console.error("Notice: shell data fallback:", err);
+    return {
+      settings: {
+        name: "Student",
+        accent: "#2563EB",
+        studyTargetMin: 180,
+        classLevel: null,
+        board: null,
+      },
+      level: levelFromXp(0) as LevelDTO,
+      streak: 0,
+      arc: arcSnapshot(todayStr()),
+      today: todayStr(),
+    };
+  }
 }
 
 /* --------------------------------- Dashboard -------------------------------- */
@@ -99,76 +131,104 @@ export async function getDashboard() {
   const today = todayStr();
   const weekStart = addDays(today, -6);
 
-  const s = await getSettings();
-  const xp = await totalXp();
-  const streak = await activityStreak();
-  const todayBlocks = await db.select().from(dailyPlans).where(eq(dailyPlans.date, today)).orderBy(asc(dailyPlans.startMin));
-  const allHabits = await db.select().from(habits).orderBy(asc(habits.createdAt));
-  const habitLogRows = await db.select().from(habitLogs).where(eq(habitLogs.date, today));
-  const priorityTasks = await db.select().from(tasks).where(sql`${tasks.status} != 'completed'`).orderBy(sql`case ${tasks.priority} when 'high' then 0 when 'medium' then 1 else 2 end`, sql`${tasks.dueDate} asc nulls last`).limit(6);
-  const dueTasks = await db.select().from(tasks).where(eq(tasks.dueDate, today));
-  const examList = await getExams();
-  const [studyToday] = await db.select({ total: sql<number>`coalesce(sum(${studySessions.minutes}),0)` }).from(studySessions).where(eq(studySessions.date, today));
-  const [studyWeek] = await db.select({ total: sql<number>`coalesce(sum(${studySessions.minutes}),0)` }).from(studySessions).where(gte(studySessions.date, weekStart));
-  const studyByDayRows = await db.select({ date: studySessions.date, total: sql<number>`sum(${studySessions.minutes})` }).from(studySessions).where(gte(studySessions.date, weekStart)).groupBy(studySessions.date);
-  const lastWorkout = await db.select().from(workouts).orderBy(desc(workouts.date), desc(workouts.id)).limit(1);
-  const runRows = await db.select().from(runs).where(gte(runs.date, weekStart));
-  const reviewToday = await db.select().from(dailyReviews).where(eq(dailyReviews.date, today));
-  const [workoutsWeek] = await db.select({ n: sql<number>`count(*)` }).from(workouts).where(gte(workouts.date, startOfWeekMonday(today)));
-  const subjectRows = await db.select().from(subjects);
-  const subjectMap = new Map(subjectRows.map((x) => [x.id, { name: x.name, color: x.color }]));
-  const nextAction = await getNextBestAction().catch(() => null);
-  const { getBacklogTree } = await import("./pcm");
-  const { getBreakWindow } = await import("./engine");
-  const pcm = await getBacklogTree().catch(() => []);
-  const breakWindow = await getBreakWindow().catch(() => null);
-  const { getRevisionDue } = await import("./engine");
-  const revisionDue = await getRevisionDue().catch(() => []);
-  const tree = await getStudyTree().catch(() => []);
-  const weakTopics = tree
-    .flatMap((s) => s.chapters.flatMap((c) => c.topics.map((x) => ({ ...x, subjectName: s.name, subjectColor: s.color }))))
-    .filter((x) => x.mastery.score > 0 && x.mastery.score < 50)
-    .sort((a, b) => a.mastery.score - b.mastery.score)
-    .slice(0, 5);
+  try {
+    const s = await getSettings();
+    const xp = await totalXp().catch(() => 0);
+    const streak = await activityStreak().catch(() => ({ current: 0, longest: 0, todayActive: false }));
+    const todayBlocks = await db.select().from(dailyPlans).where(eq(dailyPlans.date, today)).orderBy(asc(dailyPlans.startMin)).catch(() => []);
+    const allHabits = await db.select().from(habits).orderBy(asc(habits.createdAt)).catch(() => []);
+    const habitLogRows = await db.select().from(habitLogs).where(eq(habitLogs.date, today)).catch(() => []);
+    const priorityTasks = await db.select().from(tasks).where(sql`${tasks.status} != 'completed'`).orderBy(sql`case ${tasks.priority} when 'high' then 0 when 'medium' then 1 else 2 end`, sql`${tasks.dueDate} asc nulls last`).limit(6).catch(() => []);
+    const dueTasks = await db.select().from(tasks).where(eq(tasks.dueDate, today)).catch(() => []);
+    const examList = await getExams().catch(() => []);
+    const [studyToday] = await db.select({ total: sql<number>`coalesce(sum(${studySessions.minutes}),0)` }).from(studySessions).where(eq(studySessions.date, today)).catch(() => [{ total: 0 }]);
+    const [studyWeek] = await db.select({ total: sql<number>`coalesce(sum(${studySessions.minutes}),0)` }).from(studySessions).where(gte(studySessions.date, weekStart)).catch(() => [{ total: 0 }]);
+    const studyByDayRows = await db.select({ date: studySessions.date, total: sql<number>`sum(${studySessions.minutes})` }).from(studySessions).where(gte(studySessions.date, weekStart)).groupBy(studySessions.date).catch(() => []);
+    const lastWorkout = await db.select().from(workouts).orderBy(desc(workouts.date), desc(workouts.id)).limit(1).catch(() => []);
+    const runRows = await db.select().from(runs).where(gte(runs.date, weekStart)).catch(() => []);
+    const reviewToday = await db.select().from(dailyReviews).where(eq(dailyReviews.date, today)).catch(() => []);
+    const [workoutsWeek] = await db.select({ n: sql<number>`count(*)` }).from(workouts).where(gte(workouts.date, startOfWeekMonday(today))).catch(() => [{ n: 0 }]);
+    const subjectRows = await db.select().from(subjects).catch(() => []);
+    const subjectMap = new Map(subjectRows.map((x) => [x.id, { name: x.name, color: x.color }]));
+    const nextAction = await getNextBestAction().catch(() => null);
+    const { getBacklogTree } = await import("./pcm");
+    const { getBreakWindow } = await import("./engine");
+    const pcm = await getBacklogTree().catch(() => []);
+    const breakWindow = await getBreakWindow().catch(() => null);
+    const { getRevisionDue } = await import("./engine");
+    const revisionDue = await getRevisionDue().catch(() => []);
+    const tree = await getStudyTree().catch(() => []);
+    const weakTopics = tree
+      .flatMap((s) => s.chapters.flatMap((c) => c.topics.map((x) => ({ ...x, subjectName: s.name, subjectColor: s.color }))))
+      .filter((x) => x.mastery.score > 0 && x.mastery.score < 50)
+      .sort((a, b) => a.mastery.score - b.mastery.score)
+      .slice(0, 5);
 
-  const blocks = todayBlocks;
-  const blocksDone = blocks.filter((b) => b.done).length;
-  const dueDone = dueTasks.filter((t) => t.status === "completed").length;
-  const totalItems = blocks.length + dueTasks.length;
-  const completion = totalItems ? Math.round(((blocksDone + dueDone) / totalItems) * 100) : 0;
+    const blocks = todayBlocks;
+    const blocksDone = blocks.filter((b) => b.done).length;
+    const dueDone = dueTasks.filter((t) => t.status === "completed").length;
+    const totalItems = blocks.length + dueTasks.length;
+    const completion = totalItems ? Math.round(((blocksDone + dueDone) / totalItems) * 100) : 0;
 
-  const studyWeekMap = new Map(studyByDayRows.map((r) => [r.date, Number(r.total)]));
-  const study7d = Array.from({ length: 7 }, (_, i) => {
-    const d = addDays(weekStart, i);
-    return { date: d, minutes: Number(studyWeekMap.get(d) ?? 0) };
-  });
+    const studyWeekMap = new Map(studyByDayRows.map((r) => [r.date, Number(r.total)]));
+    const study7d = Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(weekStart, i);
+      return { date: d, minutes: Number(studyWeekMap.get(d) ?? 0) };
+    });
 
-  const runsThisWeekKm = runRows.filter((r) => r.type === "run").reduce((a, r) => a + (r.distanceKm ?? 0), 0);
+    const runsThisWeekKm = runRows.filter((r) => r.type === "run").reduce((a, r) => a + (r.distanceKm ?? 0), 0);
 
-  return {
-    today,
-    settings: s,
-    level: levelFromXp(xp),
-    streak: streak.current,
-    blocks,
-    completion,
-    habits: allHabits.map((h) => ({ ...h, doneToday: habitLogRows.some((l) => l.habitId === h.id) })),
-    priorityTasks: priorityTasks.map((t) => ({ ...t, subjectName: t.subjectId ? subjectMap.get(t.subjectId)?.name ?? null : null, subjectColor: t.subjectId ? subjectMap.get(t.subjectId)?.color ?? null : null })),
-    exams: examList.filter((e) => e.daysRemaining >= 0).slice(0, 3),
-    studyTodayMin: Number(studyToday?.total ?? 0),
-    studyWeekMin: Number(studyWeek?.total ?? 0),
-    study7d,
-    lastWorkout: lastWorkout[0] ?? null,
-    runsThisWeekKm: Math.round(runsThisWeekKm * 100) / 100,
-    workoutsThisWeek: Number(workoutsWeek?.n ?? 0),
-    review: reviewToday[0] ?? null,
-    arc: arcSnapshot(today),
-    nextAction,
-    pcm,
-    breakWindow,
-    revisionDueCount: revisionDue.length,
-    weakTopics,
-  };
+    return {
+      today,
+      settings: s,
+      level: levelFromXp(xp),
+      streak: streak.current,
+      blocks,
+      completion,
+      habits: allHabits.map((h) => ({ ...h, doneToday: habitLogRows.some((l) => l.habitId === h.id) })),
+      priorityTasks: priorityTasks.map((t) => ({ ...t, subjectName: t.subjectId ? subjectMap.get(t.subjectId)?.name ?? null : null, subjectColor: t.subjectId ? subjectMap.get(t.subjectId)?.color ?? null : null })),
+      exams: examList.filter((e) => e.daysRemaining >= 0).slice(0, 3),
+      studyTodayMin: Number(studyToday?.total ?? 0),
+      studyWeekMin: Number(studyWeek?.total ?? 0),
+      study7d,
+      lastWorkout: lastWorkout[0] ?? null,
+      runsThisWeekKm: Math.round(runsThisWeekKm * 100) / 100,
+      workoutsThisWeek: Number(workoutsWeek?.n ?? 0),
+      review: reviewToday[0] ?? null,
+      arc: arcSnapshot(today),
+      nextAction,
+      pcm,
+      breakWindow,
+      revisionDueCount: revisionDue.length,
+      weakTopics,
+    };
+  } catch (err) {
+    console.error("Notice: getDashboard fallback:", err);
+    return {
+      today,
+      settings: { name: "Student", accent: "#2563EB", studyTargetMin: 180, classLevel: null, board: null },
+      level: levelFromXp(0),
+      streak: 0,
+      blocks: [],
+      completion: 0,
+      habits: [],
+      priorityTasks: [],
+      exams: [],
+      studyTodayMin: 0,
+      studyWeekMin: 0,
+      study7d: [],
+      lastWorkout: null,
+      runsThisWeekKm: 0,
+      workoutsThisWeek: 0,
+      review: null,
+      arc: arcSnapshot(today),
+      nextAction: null,
+      pcm: [],
+      breakWindow: null,
+      revisionDueCount: 0,
+      weakTopics: [],
+    };
+  }
 }
 
 /* --------------------------------- Analytics -------------------------------- */

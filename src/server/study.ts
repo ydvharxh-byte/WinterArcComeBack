@@ -96,61 +96,66 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 /* --------------------------------- Queries --------------------------------- */
 
 export async function getStudyTree(): Promise<SubjectDTO[]> {
-  const subjectsRows = await db.select().from(subjects).orderBy(asc(subjects.createdAt));
-  if (subjectsRows.length === 0) return [];
+  try {
+    const subjectsRows = await db.select().from(subjects).orderBy(asc(subjects.createdAt));
+    if (subjectsRows.length === 0) return [];
 
-  const chapterRows = await db.select().from(chapters).orderBy(asc(chapters.sortOrder), asc(chapters.id));
-  const topicRows = await db.select().from(topics).orderBy(asc(topics.sortOrder), asc(topics.id));
-  const minutesRows = await db
-    .select({ subjectId: studySessions.subjectId, total: sql<number>`sum(${studySessions.minutes})` })
-    .from(studySessions)
-    .groupBy(studySessions.subjectId);
-  const minutesMap = new Map(minutesRows.map((r) => [r.subjectId, Number(r.total)]));
+    const chapterRows = await db.select().from(chapters).orderBy(asc(chapters.sortOrder), asc(chapters.id));
+    const topicRows = await db.select().from(topics).orderBy(asc(topics.sortOrder), asc(topics.id));
+    const minutesRows = await db
+      .select({ subjectId: studySessions.subjectId, total: sql<number>`sum(${studySessions.minutes})` })
+      .from(studySessions)
+      .groupBy(studySessions.subjectId);
+    const minutesMap = new Map(minutesRows.map((r) => [r.subjectId, Number(r.total)]));
 
-  // Mastery: evidence from sessions + evaluated attempts, penalties for repeated mistakes
-  const { evidence, lastActivity } = await collectTopicEvidence();
-  const today = todayStr();
+    // Mastery: evidence from sessions + evaluated attempts, penalties for repeated mistakes
+    const { evidence, lastActivity } = await collectTopicEvidence();
+    const today = todayStr();
 
-  return subjectsRows.map((s) => {
-    const chs = chapterRows
-      .filter((c) => c.subjectId === s.id)
-      .map((c) => {
-        const tps = topicRows.filter((t) => t.chapterId === c.id);
-        const done = tps.filter((t) => t.status === "done").length;
-        return {
-          id: c.id,
-          subjectId: c.subjectId,
-          name: c.name,
-          progress: tps.length ? Math.round((done / tps.length) * 100) : 0,
-          topics: tps.map((t) => ({
-            id: t.id,
-            chapterId: t.chapterId,
-            name: t.name,
-            status: t.status as "todo" | "in_progress" | "done",
-            difficulty: t.difficulty,
-            priority: t.priority as "high" | "medium" | "low",
-            prerequisiteId: t.prerequisiteId,
-            isCurrent: t.isCurrent,
-            notes: t.notes,
-            link: t.link,
-            mastery: buildMastery(t.id, evidence, lastActivity, today),
-          })),
-        };
-      });
-    const totalTopics = chs.reduce((a, c) => a + c.topics.length, 0);
-    const doneTopics = chs.reduce((a, c) => a + c.topics.filter((t) => t.status === "done").length, 0);
-    return {
-      id: s.id,
-      name: s.name,
-      color: s.color,
-      description: s.description,
-      progress: totalTopics ? Math.round((doneTopics / totalTopics) * 100) : 0,
-      totalTopics,
-      doneTopics,
-      minutes: minutesMap.get(s.id) ?? 0,
-      chapters: chs,
-    };
-  });
+    return subjectsRows.map((s) => {
+      const chs = chapterRows
+        .filter((c) => c.subjectId === s.id)
+        .map((c) => {
+          const tps = topicRows.filter((t) => t.chapterId === c.id);
+          const done = tps.filter((t) => t.status === "done").length;
+          return {
+            id: c.id,
+            subjectId: c.subjectId,
+            name: c.name,
+            progress: tps.length ? Math.round((done / tps.length) * 100) : 0,
+            topics: tps.map((t) => ({
+              id: t.id,
+              chapterId: t.chapterId,
+              name: t.name,
+              status: t.status as "todo" | "in_progress" | "done",
+              difficulty: t.difficulty,
+              priority: t.priority as "high" | "medium" | "low",
+              prerequisiteId: t.prerequisiteId,
+              isCurrent: t.isCurrent,
+              notes: t.notes,
+              link: t.link,
+              mastery: buildMastery(t.id, evidence, lastActivity, today),
+            })),
+          };
+        });
+      const totalTopics = chs.reduce((a, c) => a + c.topics.length, 0);
+      const doneTopics = chs.reduce((a, c) => a + c.topics.filter((t) => t.status === "done").length, 0);
+      return {
+        id: s.id,
+        name: s.name,
+        color: s.color,
+        description: s.description,
+        progress: totalTopics ? Math.round((doneTopics / totalTopics) * 100) : 0,
+        totalTopics,
+        doneTopics,
+        minutes: minutesMap.get(s.id) ?? 0,
+        chapters: chs,
+      };
+    });
+  } catch (err) {
+    console.error("Notice: getStudyTree fallback:", err);
+    return [];
+  }
 }
 
 export async function getRecentSessions(limit = 25): Promise<SessionDTO[]> {
