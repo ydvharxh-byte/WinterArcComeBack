@@ -100,7 +100,7 @@ export function NotesClient({ documents, tree }: { documents: NoteDocumentDTO[];
             <button
               key={d.id}
               onClick={() => setOpenDoc(d)}
-              className="flex w-full items-center gap-4 rounded-xl bg-panel px-5 py-4 text-left transition-colors hover:bg-[#16233a] cursor-pointer"
+              className="flex w-full items-center gap-4 rounded-xl bg-panel px-5 py-4 text-left transition-colors hover:bg-panel2 cursor-pointer"
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet/12 text-violet-soft"><FolderOpen className="size-5" /></span>
               <div className="min-w-0 flex-1">

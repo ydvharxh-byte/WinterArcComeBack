@@ -36,13 +36,13 @@ export const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export const BLOCK_COLORS: Record<string, string> = {
-  task: "#2563EB",
-  study: "#06B6D4",
+  task: "#2196F3",
+  study: "#90CAF9",
   exam: "#F87171",
   gym: "#FBBF24",
   run: "#34D399",
   meal: "#34D399",
-  habit: "#6366F1",
+  habit: "#0D47A1",
   rest: "#475569",
   other: "#94A3B8",
 };
@@ -51,9 +51,9 @@ export const BLOCK_TYPES = ["task", "study", "exam", "gym", "run", "meal", "habi
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
 export const SUBJECT_COLORS = [
-  "#2563EB",
-  "#06B6D4",
-  "#6366F1",
+  "#2196F3",
+  "#90CAF9",
+  "#0D47A1",
   "#34D399",
   "#FBBF24",
   "#F87171",
@@ -61,7 +61,10 @@ export const SUBJECT_COLORS = [
 ];
 
 export const ACCENTS = [
-  { id: "#2563EB", name: "Blue" },
+  { id: "#2196F3", name: "Electric Azure" },
+  { id: "#90CAF9", name: "Glacier Blue" },
+  { id: "#0D47A1", name: "Royal Navy" },
+  { id: "#2563EB", name: "Classic Cobalt" },
   { id: "#06B6D4", name: "Cyan" },
-  { id: "#6366F1", name: "Indigo" },
 ];
+

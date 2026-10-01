@@ -81,7 +81,7 @@ function SidebarContent({ data, onNavigate }: { data: ShellData; onNavigate?: ()
 
       {/* Arc chip */}
       <Link href="/winter-arc" onClick={onNavigate} className="mx-3 mt-4 block shrink-0">
-        <div className="rounded-xl bg-panel2 p-3 transition-colors hover:bg-[#1b2a42]">
+        <div className="rounded-xl bg-panel2 p-3 transition-colors hover:bg-line/40">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-mute">
               <Snowflake className="size-3.5 text-ice" />

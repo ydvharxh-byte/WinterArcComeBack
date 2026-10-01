@@ -14,6 +14,7 @@ const globalForDb = globalThis as typeof globalThis & {
   __studyOsDb?: DbType;
   __studyOsPool?: Pool;
   __studyOsMigrated?: boolean;
+  __studyOsReadyPromise?: Promise<void>;
 };
 
 async function autoMigratePg(pool: Pool) {
@@ -37,18 +38,23 @@ async function autoMigratePg(pool: Pool) {
   }
 }
 
+import { resolveDataDir } from "./storage";
+
 async function autoMigratePglite(client: PGlite) {
   try {
+    await client.waitReady;
     const res = await client.query(
       "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'subjects' LIMIT 1"
     );
     if (res.rows.length === 0) {
+      console.log("Auto-initializing database tables on PGlite...");
       const stmts = MIGRATION_SQL.split("--> statement-breakpoint")
         .map((s) => s.trim())
         .filter(Boolean);
       for (const stmt of stmts) {
         await client.query(stmt);
       }
+      console.log("PGlite tables successfully created.");
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -75,14 +81,12 @@ function createDatabase(): { db: DbType; pool: Pool } {
         connectionTimeoutMillis: 5000,
       });
 
-    if (process.env.NODE_ENV !== "production") {
-      globalForDb.__studyOsPool = pool;
-    }
+    globalForDb.__studyOsPool = pool;
 
-    if (!globalForDb.__studyOsMigrated) {
-      globalForDb.__studyOsMigrated = true;
-      autoMigratePg(pool).catch(() => {});
-    }
+    const readyPromise = autoMigratePg(pool).catch((e) => {
+      console.error("Auto-migration error (PG):", e);
+    });
+    globalForDb.__studyOsReadyPromise = readyPromise;
 
     return { db: drizzle(pool), pool };
   }
@@ -97,28 +101,25 @@ function createDatabase(): { db: DbType; pool: Pool } {
     return { db: drizzlePglite(client) as unknown as DbType, pool: client as unknown as Pool };
   }
 
-  // Vercel serverless environment: only /tmp is writable
-  const isVercel = Boolean(process.env.VERCEL);
-  const baseDir = isVercel ? "/tmp" : process.cwd();
-  const dataDir = path.join(baseDir, ".data", "study-os");
+  const dataDir = resolveDataDir();
 
   try {
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
     const client = new PGlite(dataDir);
     const pgliteDb = drizzlePglite(client);
 
-    if (!globalForDb.__studyOsMigrated) {
-      globalForDb.__studyOsMigrated = true;
-      autoMigratePglite(client).catch(() => {});
-    }
+    const readyPromise = autoMigratePglite(client).catch((e) => {
+      console.error("Auto-migration error (PGlite):", e);
+    });
+    globalForDb.__studyOsReadyPromise = readyPromise;
 
     return { db: pgliteDb as unknown as DbType, pool: client as unknown as Pool };
   } catch (err) {
     console.error("PGlite directory unavailable, using in-memory:", err);
     const client = new PGlite();
-    autoMigratePglite(client).catch(() => {});
+    const readyPromise = autoMigratePglite(client).catch((e) => {
+      console.error("Auto-migration error (PGlite fallback):", e);
+    });
+    globalForDb.__studyOsReadyPromise = readyPromise;
     return { db: drizzlePglite(client) as unknown as DbType, pool: client as unknown as Pool };
   }
 }
@@ -127,10 +128,20 @@ const instance = globalForDb.__studyOsDb
   ? { db: globalForDb.__studyOsDb, pool: globalForDb.__studyOsPool! }
   : createDatabase();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__studyOsDb = instance.db;
-  globalForDb.__studyOsPool = instance.pool;
-}
+globalForDb.__studyOsDb = instance.db;
+globalForDb.__studyOsPool = instance.pool;
 
 export const db: DbType = instance.db;
 export const pool: Pool = instance.pool;
+
+export async function ensureDbReady(): Promise<void> {
+  if (globalForDb.__studyOsReadyPromise) {
+    try {
+      await globalForDb.__studyOsReadyPromise;
+    } catch (e) {
+      console.error("ensureDbReady warning:", e);
+    }
+  }
+}
+
+

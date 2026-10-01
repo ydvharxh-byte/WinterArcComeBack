@@ -113,7 +113,7 @@ export function HomeClient({ d, tree }: { d: DashboardData; tree: SubjectDTO[] }
       {/* 2 — Winter Arc */}
       <section>
         <Link href="/winter-arc" className="group block">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-panel px-5 py-4 transition-colors hover:bg-[#16233a]">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-panel px-5 py-4 transition-colors hover:bg-panel2">
             <span className="flex items-center gap-2 text-sm font-semibold"><Snowflake className="size-4 text-ice" /> Winter Arc</span>
             {d.arc.status === "pre" ? (
               <p className="text-sm text-mute">
@@ -179,7 +179,7 @@ export function HomeClient({ d, tree }: { d: DashboardData; tree: SubjectDTO[] }
       {/* Next best action — from the planner engine over real academic state */}
       {d.nextAction && (
         <section>
-          <Link href={d.nextAction.href} className="group flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-panel px-5 py-3.5 transition-colors hover:bg-[#16233a]">
+          <Link href={d.nextAction.href} className="group flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-panel px-5 py-3.5 transition-colors hover:bg-panel2">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
               <Target className="size-4" />
             </span>

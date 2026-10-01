@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B1220",
+  themeColor: "#070D18",
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -33,8 +33,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "#16233A",
-              border: "1px solid #243247",
+              background: "#12213A",
+              border: "1px solid #1C3152",
               color: "#F8FAFC",
             },
           }}

@@ -202,8 +202,18 @@ export interface ChapterOverview {
 
 /** Chapter overview with per-topic stage + mastery (§14). */
 export async function getChapterOverview(chapterId: number): Promise<ChapterOverview | null> {
-  if (!Number.isInteger(chapterId)) return null;
-  const [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
+  if (!Number.isInteger(chapterId) || chapterId <= 0) return null;
+  const { ensureDbReady } = await import("@/db");
+  await ensureDbReady();
+  let [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
+  if (!chapter) {
+    const subjectsRows = await db.select().from(subjects).limit(1);
+    if (subjectsRows.length === 0) {
+      const { seedStarter } = await import("./seed-data");
+      await seedStarter();
+      [chapter] = await db.select().from(chapters).where(eq(chapters.id, chapterId));
+    }
+  }
   if (!chapter) return null;
   const [subject] = await db.select().from(subjects).where(eq(subjects.id, chapter.subjectId));
   const topicRows = await db.select().from(topics).where(eq(topics.chapterId, chapterId)).orderBy(asc(topics.sortOrder));

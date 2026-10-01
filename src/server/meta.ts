@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { db, ensureDbReady } from "@/db";
 import {
   chapters,
   dailyPlans,
@@ -53,11 +53,12 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function getSettings(): Promise<SettingsDTO> {
   try {
+    await ensureDbReady();
     const rows = await db.select().from(settings);
     const map = new Map(rows.map((r) => [r.key, r.value]));
     return {
       name: map.get("name") ?? "Student",
-      accent: map.get("accent") ?? "#2563EB",
+      accent: map.get("accent") ?? "#2196F3",
       studyTargetMin: Number(map.get("studyTargetMin") ?? 180),
       classLevel: map.get("classLevel") ? Number(map.get("classLevel")) : null,
       board: map.get("board") ?? null,
@@ -66,7 +67,7 @@ export async function getSettings(): Promise<SettingsDTO> {
     console.error("Notice: settings read fallback:", err);
     return {
       name: "Student",
-      accent: "#2563EB",
+      accent: "#2196F3",
       studyTargetMin: 180,
       classLevel: null,
       board: null,
@@ -96,7 +97,7 @@ export async function updateSettings(input: Partial<SettingsDTO>): Promise<Actio
 export async function getShellData(): Promise<ShellData> {
   try {
     const [s, xp, streak] = await Promise.all([
-      getSettings().catch(() => ({ name: "Student", accent: "#2563EB", studyTargetMin: 180, classLevel: null, board: null })),
+      getSettings().catch(() => ({ name: "Student", accent: "#2196F3", studyTargetMin: 180, classLevel: null, board: null })),
       totalXp().catch(() => 0),
       activityStreak().catch(() => ({ current: 0, longest: 0, todayActive: false })),
     ]);
@@ -112,7 +113,7 @@ export async function getShellData(): Promise<ShellData> {
     return {
       settings: {
         name: "Student",
-        accent: "#2563EB",
+        accent: "#2196F3",
         studyTargetMin: 180,
         classLevel: null,
         board: null,
@@ -132,6 +133,7 @@ export async function getDashboard() {
   const weekStart = addDays(today, -6);
 
   try {
+    await ensureDbReady();
     const s = await getSettings();
     const xp = await totalXp().catch(() => 0);
     const streak = await activityStreak().catch(() => ({ current: 0, longest: 0, todayActive: false }));

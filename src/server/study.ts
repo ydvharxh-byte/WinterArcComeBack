@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/db";
+import { db, ensureDbReady } from "@/db";
 import {
   chapters,
   examChapters,
@@ -97,7 +97,13 @@ const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function getStudyTree(): Promise<SubjectDTO[]> {
   try {
-    const subjectsRows = await db.select().from(subjects).orderBy(asc(subjects.createdAt));
+    await ensureDbReady();
+    let subjectsRows = await db.select().from(subjects).orderBy(asc(subjects.createdAt));
+    if (subjectsRows.length === 0) {
+      const { seedStarter } = await import("./seed-data");
+      await seedStarter();
+      subjectsRows = await db.select().from(subjects).orderBy(asc(subjects.createdAt));
+    }
     if (subjectsRows.length === 0) return [];
 
     const chapterRows = await db.select().from(chapters).orderBy(asc(chapters.sortOrder), asc(chapters.id));
@@ -375,7 +381,17 @@ export interface TopicDetail {
 }
 
 export async function getTopicDetail(topicId: number): Promise<TopicDetail | null> {
-  const [t] = await db.select().from(topics).where(eq(topics.id, topicId));
+  if (!Number.isInteger(topicId) || topicId <= 0) return null;
+  await ensureDbReady();
+  let [t] = await db.select().from(topics).where(eq(topics.id, topicId));
+  if (!t) {
+    const subjectsRows = await db.select().from(subjects).limit(1);
+    if (subjectsRows.length === 0) {
+      const { seedStarter } = await import("./seed-data");
+      await seedStarter();
+      [t] = await db.select().from(topics).where(eq(topics.id, topicId));
+    }
+  }
   if (!t) return null;
   const [chapter] = await db.select().from(chapters).where(eq(chapters.id, t.chapterId));
   const [subject] = chapter ? await db.select().from(subjects).where(eq(subjects.id, chapter.subjectId)) : [undefined];

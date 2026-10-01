@@ -1,16 +1,9 @@
-const { PGlite } = require("@electric-sql/pglite");
-const { drizzle } = require("drizzle-orm/pglite");
-const { migrate } = require("drizzle-orm/pglite/migrator");
-const path = require("path");
-const fs = require("fs");
-const os = require("os");
-const dotenv = require("dotenv");
+import path from "path";
+import fs from "fs";
+import os from "os";
 
-// Load local environment overrides
-dotenv.config({ path: path.join(process.cwd(), ".env.local") });
-dotenv.config({ path: path.join(process.cwd(), ".env") });
-
-function resolveDataDir() {
+export function resolveDataDir(): string {
+  // 1. Explicit override via environment variable
   if (process.env.STUDY_OS_DATA_DIR) {
     const customDir = path.resolve(process.env.STUDY_OS_DATA_DIR);
     if (!fs.existsSync(customDir)) {
@@ -19,6 +12,7 @@ function resolveDataDir() {
     return customDir;
   }
 
+  // 2. Vercel serverless environment (/tmp is the only writable directory)
   if (process.env.VERCEL) {
     const vercelDir = path.join("/tmp", ".data", "study-os");
     if (!fs.existsSync(vercelDir)) {
@@ -27,19 +21,26 @@ function resolveDataDir() {
     return vercelDir;
   }
 
+  // 3. Platform & OneDrive detection
+  // On Windows or when the project resides in a OneDrive-synced folder (such as Desktop or Documents),
+  // PGlite's WASM engine fails to create or unlink lock files (postmaster.pid) because OneDrive's
+  // cloud filter driver locks them and marks them as reparse points.
+  // This causes: "FATAL: could not create lock file postmaster.pid: Permission denied".
+  // Moving the local persistent DB to %LOCALAPPDATA%/study-os/data (or ~/.study-os/data) guarantees
+  // reliable local persistence that survives restarts and site reloads.
   const isWindows = process.platform === "win32";
   const isOneDrive = /onedrive/i.test(process.cwd());
 
-  let targetDir;
+  let targetDir: string;
   if (isWindows || isOneDrive) {
     const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");
     targetDir = path.join(localAppData, "study-os", "data");
   } else {
-    targetDir = path.join(process.cwd(), ".data", "study-os");
+    targetDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "study-os");
   }
 
   // Automatic Migration from legacy in-project .data/study-os
-  const legacyDir = path.join(process.cwd(), ".data", "study-os");
+  const legacyDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ".data", "study-os");
   if (
     legacyDir !== targetDir &&
     fs.existsSync(legacyDir) &&
@@ -49,6 +50,7 @@ function resolveDataDir() {
       console.log(`[Study OS] Migrating database from ${legacyDir} to ${targetDir}...`);
       fs.mkdirSync(targetDir, { recursive: true });
       fs.cpSync(legacyDir, targetDir, { recursive: true });
+      // Remove any stale lock file in copied data
       const stalePid = path.join(targetDir, "postmaster.pid");
       if (fs.existsSync(stalePid)) {
         try {
@@ -65,6 +67,7 @@ function resolveDataDir() {
     fs.mkdirSync(targetDir, { recursive: true });
   }
 
+  // Clean stale lock file if left over from a previous crash/ungraceful termination
   const pidFile = path.join(targetDir, "postmaster.pid");
   if (fs.existsSync(pidFile)) {
     try {
@@ -74,40 +77,3 @@ function resolveDataDir() {
 
   return targetDir;
 }
-
-async function ensureDb() {
-  const databaseUrl = process.env.DATABASE_URL;
-  const isPostgresUrl =
-    databaseUrl &&
-    (databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://"));
-
-  if (isPostgresUrl) {
-    console.log("Using PostgreSQL at:", databaseUrl.replace(/:[^:@]+@/, ":***@"));
-    return;
-  }
-
-  const dataDir = resolveDataDir();
-  console.log("[Study OS] Preparing persistent database at:", dataDir);
-
-  const client = new PGlite(dataDir);
-  await client.waitReady;
-  const db = drizzle(client);
-  const migrationsFolder = path.join(process.cwd(), "drizzle");
-
-  if (fs.existsSync(migrationsFolder)) {
-    console.log("Applying database migrations to local embedded database...");
-    await migrate(db, { migrationsFolder });
-    console.log("Database schema is up to date.");
-  }
-
-  await client.close();
-}
-
-if (require.main === module) {
-  ensureDb().catch((err) => {
-    console.error("Database preparation warning:", err.message);
-  });
-}
-
-module.exports = { resolveDataDir, ensureDb };
-

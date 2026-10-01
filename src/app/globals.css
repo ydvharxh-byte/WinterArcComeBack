@@ -1,22 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-manrope), "Manrope", var(--font-inter), sans-serif;
 
-  /* Academic OS palette */
-  --color-ink: #0b1220;      /* page background */
-  --color-panel: #111c2e;    /* surfaces */
-  --color-panel2: #16233a;   /* raised surfaces, inputs */
-  --color-line: #243247;     /* borders */
-  --color-line2: #31435e;    /* border hover */
+  /* Winter Arc Blue Palette (#E3F2FD, #90CAF9, #2196F3, #0D47A1) */
+  --color-ink: #070d18;       /* deep dark canvas */
+  --color-panel: #0d1728;     /* dark navy-tinted panel */
+  --color-panel2: #12213a;    /* raised surfaces, inputs */
+  --color-line: #1c3152;      /* crisp palette borders */
+  --color-line2: #274574;     /* border hover */
 
-  --color-brand: #2563eb;    /* primary action */
-  --color-ice: #06b6d4;      /* secondary accent (data, revision) */
-  --color-indigo: #6366f1;   /* sparing use only */
-  --color-violet: #6366f1;   /* legacy alias → indigo, keeps old classes sane */
-  --color-violet-soft: #818cf8;
-  --color-cyan: #06b6d4;
+  --color-brand: #2196f3;     /* primary vibrant azure */
+  --color-brand-deep: #0d47a1;/* deep navy cobalt */
+  --color-brand-light: #90caf9;/* soft glacier azure */
+  --color-brand-ice: #e3f2fd; /* glacier ice tint */
+
+  --color-ice: #90caf9;       /* secondary accent */
+  --color-indigo: #2196f3;
+  --color-violet: #2196f3;
+  --color-violet-soft: #90caf9;
+  --color-cyan: #90caf9;
 
   --color-success: #34d399;
   --color-warning: #fbbf24;
@@ -28,7 +32,10 @@
 }
 
 :root {
-  --accent: #2563eb;
+  --accent: #2196f3;
+  --accent-ice: #e3f2fd;
+  --accent-soft: #90caf9;
+  --accent-deep: #0d47a1;
 }
 
 html {
@@ -46,21 +53,22 @@ body {
 .bg-accent { background-color: var(--accent); }
 .text-accent { color: var(--accent); }
 .border-accent { border-color: var(--accent); }
-.bg-accent-soft { background-color: color-mix(in srgb, var(--accent) 14%, transparent); }
+.bg-accent-soft { background-color: color-mix(in srgb, var(--accent) 15%, transparent); }
 .ring-accent { --tw-ring-color: var(--accent); }
 
 .font-display { font-family: var(--font-display); }
 
-::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+::selection { background: #2196f3; color: #ffffff; }
 
-* { scrollbar-width: thin; scrollbar-color: #243247 transparent; }
+* { scrollbar-width: thin; scrollbar-color: #1c3152 transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: #243247; border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: #1c3152; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #274574; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.62);
+  filter: invert(0.75);
   cursor: pointer;
 }
 
@@ -68,34 +76,34 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.anim-fade-up { animation: fadeUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-fade-up { animation: fadeUp 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 @keyframes popIn {
-  from { opacity: 0; transform: scale(0.98) translateY(6px); }
+  from { opacity: 0; transform: scale(0.98) translateY(4px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
-.anim-pop { animation: popIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-pop { animation: popIn 0.18s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 @keyframes shimmer {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
 }
 
-/* restrained card: subtle border + flat surface, no glow */
+/* card hover transition */
 .card-hover { transition: border-color 0.15s ease, background-color 0.15s ease; }
-.card-hover:hover { border-color: #31435e; }
+.card-hover:hover { border-color: #274574; }
 
 /* academic prose for generated lessons */
 .lesson h1 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; margin: 0 0 0.75rem; }
-.lesson h2 { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; color: #f8fafc; margin: 1.35rem 0 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid #243247; }
+.lesson h2 { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; color: #f8fafc; margin: 1.35rem 0 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid #1c3152; }
 .lesson h3 { font-size: 0.875rem; font-weight: 600; margin: 1rem 0 0.3rem; }
 .lesson p { margin: 0.45rem 0; line-height: 1.7; color: #cbd5e1; font-size: 0.875rem; }
 .lesson ul, .lesson ol { margin: 0.45rem 0 0.45rem 1.1rem; }
 .lesson li { margin: 0.3rem 0; line-height: 1.65; color: #cbd5e1; font-size: 0.875rem; list-style: disc; }
 .lesson ol li { list-style: decimal; }
-.lesson code { background: #16233a; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; color: #93c5fd; }
+.lesson code { background: #12213a; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; color: #90caf9; }
 .lesson strong { color: #f8fafc; font-weight: 600; }
-.lesson blockquote { border-left: 2px solid #2563eb; padding-left: 0.75rem; margin: 0.6rem 0; color: #94a3b8; font-size: 0.85rem; }
+.lesson blockquote { border-left: 2px solid #2196f3; padding-left: 0.75rem; margin: 0.6rem 0; color: #94a3b8; font-size: 0.85rem; }
 .lesson table { width: 100%; border-collapse: collapse; margin: 0.6rem 0; font-size: 0.82rem; }
-.lesson th, .lesson td { border: 1px solid #243247; padding: 0.4rem 0.6rem; text-align: left; }
-.lesson th { background: #16233a; font-weight: 600; }
+.lesson th, .lesson td { border: 1px solid #1c3152; padding: 0.4rem 0.6rem; text-align: left; }
+.lesson th { background: #12213a; font-weight: 600; }

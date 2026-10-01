@@ -24,14 +24,14 @@ export async function seedStarter() {
   /* Settings */
   await db.insert(settings).values([
     { key: "name", value: "Student" },
-    { key: "accent", value: "#2563EB" },
+    { key: "accent", value: "#2196F3" },
     { key: "studyTargetMin", value: "180" },
   ]).onConflictDoNothing();
 
   /* Subjects → chapters → topics */
-  const [math] = await db.insert(subjects).values({ name: "Mathematics", color: "#2563EB", description: "Core maths for semester exams" }).returning();
-  const [physics] = await db.insert(subjects).values({ name: "Physics", color: "#06B6D4", description: "Mechanics and thermodynamics" }).returning();
-  const [cs] = await db.insert(subjects).values({ name: "Computer Science", color: "#06B6D4", description: "DSA and problem solving" }).returning();
+  const [math] = await db.insert(subjects).values({ name: "Mathematics", color: "#2196F3", description: "Core maths for semester exams" }).returning();
+  const [physics] = await db.insert(subjects).values({ name: "Physics", color: "#90CAF9", description: "Mechanics and thermodynamics" }).returning();
+  const [cs] = await db.insert(subjects).values({ name: "Computer Science", color: "#0D47A1", description: "DSA and problem solving" }).returning();
 
   const [calc] = await db.insert(chapters).values([
     { subjectId: math.id, name: "Calculus", sortOrder: 1 },
@@ -108,9 +108,9 @@ export async function seedStarter() {
   /* Today's plan (custom blocks) */
   await db.insert(dailyPlans).values([
     { date: today, startMin: 6 * 60, endMin: 6 * 60 + 45, type: "habit", title: "Morning routine", color: "#FBBF24" },
-    { date: today, startMin: 7 * 60, endMin: 9 * 60, type: "study", title: "Deep work — Calculus", color: "#2563EB" },
+    { date: today, startMin: 7 * 60, endMin: 9 * 60, type: "study", title: "Deep work — Calculus", color: "#2196F3" },
     { date: today, startMin: 12 * 60 + 30, endMin: 13 * 60 + 15, type: "meal", title: "Lunch", color: "#34D399" },
-    { date: today, startMin: 16 * 60, endMin: 17 * 60 + 30, type: "study", title: "Trees — problem set", color: "#06B6D4" },
+    { date: today, startMin: 16 * 60, endMin: 17 * 60 + 30, type: "study", title: "Trees — problem set", color: "#90CAF9" },
     { date: today, startMin: 18 * 60, endMin: 19 * 60, type: "gym", title: "Push day", color: "#FBBF24" },
     { date: today, startMin: 21 * 60 + 30, endMin: 22 * 60, type: "rest", title: "Wind down — no screens", color: "#64748B" },
   ]);
